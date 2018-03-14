@@ -5,6 +5,9 @@ All codes from the artcile in files PAPER_ALL_CODE.R and PAPER_ALL_CODE.sas
 
 Materials for OMSI survey are avaliable in OMSI_ALL.R and OMSI_ALL.sas
 
-Also, you can find CSV file with raw data 
+Also, you can find CSV file with raw data or donwdload it from the Survey`s https://osmihelp.org/research.
+
+
+
 
 
