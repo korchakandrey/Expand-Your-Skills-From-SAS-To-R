@@ -1,5 +1,5 @@
 /***************************************************************
-* OMSI_all_code.sas - Produce examples from BB-22 paper in SAS
+* BB_22_all_codes.sas - Produce examples from BB-22 paper in SAS
 ***************************************************************
 * Author: Korchak, Andrii
 ***************************************************************
