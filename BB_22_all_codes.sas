@@ -45,7 +45,7 @@ proc contents data=raw_ds;
 quit;
 
 *** Selecting some Demographic data;
-data demog2;
+data demog;
    set raw_ds(
    rename = (
    VAR56 = AGE       
