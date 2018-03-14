@@ -159,7 +159,7 @@ data outcome;
 	       CAT = "Age";
 	   end;
 	   
-	   *** Changing apperense of missing values **;
+	   *** Changing appearance of missing values **;
 	   if missing(PARAM) then PARAM = "NA";
 	   
 	   if in_age then do;
