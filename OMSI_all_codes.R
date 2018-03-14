@@ -7,6 +7,7 @@
 # 
 # Output: csv_file  - data frame with demographic information from OMSI survey
 #         results from print() function
+#         AGE density graph
 ##################################################################
 
 require(dplyr)
