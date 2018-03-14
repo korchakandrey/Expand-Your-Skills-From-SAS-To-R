@@ -98,7 +98,7 @@ df_table3 <- as.data.frame(t(s_mean), stringsAsFactors = FALSE) %>% tibble::rown
               mutate( param = "Age") %>%  rename( Var = rowname , Value = V1) %>% select( param , Var, Value )
 
 
-### To make an output readable we are creating a blank row. Leter it will be added between blocks in the output
+### To make an output readable we are creating a blank row. Later it will be added between blocks in the output
 df_table_blank <- data.frame (Var = "",  Freq =NA_integer_, param = "", stringsAsFactors = FALSE)
 
 ### Copy Big_N into variable
@@ -106,11 +106,11 @@ big_n <- demog$BIG_N[1]
 ### Prepearing title
 header <- paste0("All responses (N = ",big_n,")")
 
-### Final step: combining together data from table() and summary() functions. Ading blank rows beetwen blocks
+### Final step: combining together data from table() and summary() functions. Adding blank rows beetwen blocks
 d_all_tabs <- bind_rows(df_table_blank, df_table1, df_table_blank, df_table2, df_table_blank, df_table )
 
 
-### To compute prepper table you need to use specialized packeges such as knit or stargazer
+### To compute propper table you need to use specialized packeges such as knit or stargazer
 
 ### Calcuulating 'Value' for output and printing the result table
 d_all_tabs %>% select(param, Var, Freq) %>%
