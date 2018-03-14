@@ -12,7 +12,7 @@
 require(dplyr)
 
 ### Setting Working Directory
-setwd("E:/R/mental-health-in-tech-2016");
+setwd("your_folder_name/");
 
 ### Reading data into the system
 csv_file<-read.csv("mental-heath-in-tech-2016_20161114.csv", stringsAsFactors = FALSE)
