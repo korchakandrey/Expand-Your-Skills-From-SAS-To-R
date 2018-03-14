@@ -189,3 +189,80 @@ proc report data = outcome split='@';
 
 	compute after CAT;	line ' '; endcomp;
 run;
+
+******************************;
+* Now Let`s make a plot       *
+******************************;
+*** Density plot will show age distribution ;
+
+*** Creating Foramts for graph;
+proc format;
+	value $ord_f
+    "Other" = "1"
+    "Female" = "2"
+    "Male" = "3"
+;
+	value $disp_f
+    "1" = "Other" 
+    "2" = "Female"
+    "3" = "Male"
+;
+run;
+
+*** Sorting data and removing missing values*
+proc sort data = transform1
+           out = tar_sort;
+    where  not missing( GENDER_C) ;
+    by GENDER_C;
+run;
+
+*** calculating mean value of Age *;
+proc summary data = tar_sort;
+	var AGEN ;
+	output out = mean_dat( where = ( _STAT_ = "MEAN" )
+	                        rename = AGEN = VALUE  );
+run;
+
+*** Adding information about mean Age to the data set ***;
+data graph_ready;
+	merge tar_sort mean_dat;
+	GENDER_N = put(GENDER_C,$ord_f. );
+	
+	if _n_ = 1 then meanval = catx("","Mean Age = ",put(VALUE,best4.1));
+run;
+
+proc sort data =  graph_ready;
+	by GENDER_N;
+run;
+
+*** Creating attribute map to assign colors to diff. gender groups ***;
+data myattrmap;
+length linecolor $ 9 ;
+input ID $ value $ linecolor $ ;
+datalines;
+myid Other red
+myid Female green
+myid Male blue
+;
+run;
+
+***Creating a plot***;
+proc sgplot data = graph_ready dattrmap=myattrmap;
+       *** density - creates a density curves ***;
+       density AGEN / group = GENDER_N attrid=myid
+	              name= "dens1" ; 
+	*** adding information about mean age and ref line ***;  
+	refline VALUE / axis = x label = meanval labelloc = outside label ;
+	*** modify the plot legend ***;
+	KEYLEGEND "dens1" / TITLE = "Gender Group" POSITION=right  ;
+	*** adding titles\footnotes***;	     
+	title 'Age Distribution by Gender Groups';
+	footnote1 j=right "Data From: OSMI Mental Health in Tech Survey";
+	footnote2 j=right "Version of 2016";
+	*** Modify axis values ***;
+	xaxis label = "Age" VALUES = ( 20 to 70 by 10 ) min = 10 max = 90  VALUESHINT GRID;
+	yaxis label = "Number of Subjects"  GRID;
+	
+	*** Gender groups display format ***;
+	format GENDER_N $disp_f.;
+quit;
