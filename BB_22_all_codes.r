@@ -26,7 +26,7 @@ df1
 ### Example 2 reading data from CSV file
 
 ### Path for file with data
-setwd("/folders/myfolders/conf/Library/");
+setwd("your_folder_name/");
 PATH <- "mental-heath-in-tech-2016_20161114.csv"
 
 ### Reading data into the system
