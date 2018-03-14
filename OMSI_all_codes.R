@@ -122,3 +122,51 @@ d_all_tabs %>% select(param, Var, Freq) %>%
    print.data.frame( row.names = FALSE) 
 
 
+###############################################
+#  Plotting AGE distribution
+# We will try to recreate an grapgh from SAS SGPLOT 
+###############################################
+require(ggplot2)
+
+### Creating an Object with ggplot() function;
+### select() is used to pick columns
+gobj <- demog %>% select(BIG_N, AGEN, GENDER_C ) %>%
+              ### na.omit() excludes missing values
+              na.omit  %>%
+              ### AGEN is used on X axis, colors are different for each GENDER value
+              ggplot( aes( x = AGEN, color = factor(GENDER_C, levels=c("Other","Female","Male") ) ))
+### ploting results. 
+### We can do it after each change to see the difference
+gobj
+
+### We can add elements to GGPLOT object.
+### geom_density() draws densiti curves
+gobj <- gobj +  geom_density()  +
+         ### adding horizontal reference lines and customizing colors
+        geom_hline(yintercept=0, colour="grey", size=1) +
+        theme_light() + theme(panel.grid.minor = element_blank())
+gobj
+
+### Changing color of groups
+gobj <- gobj + scale_color_manual(values=c("red","green","blue")) 
+gobj
+
+### Changing Legend
+gobj <- gobj + guides(color= guide_legend("Gender\nGroup")) 
+gobj
+
+### We can continue and add vertical line for mean values
+gobj <- gobj+ geom_vline(aes( xintercept = mean(AGEN, na.rm = TRUE) ), color = "grey40")  +
+      geom_text(aes(x=mean(AGEN, na.rm = TRUE)*1.1, y = 0.07 , label=paste0("Mean Age=",round(mean(AGEN, na.rm = TRUE),1) ) ), colour="grey40", size=3.5 )
+gobj
+
+### Adding title
+gobj <- gobj  +xlab("Age") + ylab("Number of Subjects") +
+  ggtitle(label =  "Age Distribution by Gender Groups")
+gobj
+
+### Adding Footnotes
+gobj <- gobj + labs( captions = paste("Data From: OSMI Mental Health in Tech Survey\nViersion 2016"))
+gobj
+
+
