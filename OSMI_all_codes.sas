@@ -7,6 +7,7 @@
 * 
 * Output: WORK.raw_ds  - file with demographic information from OMSI survey
 *         html tables from PROC Print
+*         graph with AGE density
 ***************************************************************/
 
 *** reference to file with data ***;
