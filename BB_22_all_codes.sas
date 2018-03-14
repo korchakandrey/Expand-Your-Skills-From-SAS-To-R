@@ -10,7 +10,7 @@
 ***************************************************************/
 
 *** reference to file with data ***;
-filename csv_srs "/folders/myfolders/conf/Library/mental-heath-in-tech-2016_20161114.csv";
+filename csv_srs "your_folder_name/mental-heath-in-tech-2016_20161114.csv";
 
 *** We cannot read columns names - we are reading only data.( datarow = 2, getnames = no ) ***; 
 proc import datafile = csv_srs
