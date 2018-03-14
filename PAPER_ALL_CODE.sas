@@ -32,7 +32,8 @@ run;
 filename csv_srs "/folders/myfolders/conf/Library/mental-heath-in-tech-2016_20161114.csv";
 
 *** ## Example 2 - reading CSV data in. ;
-*** We cannot read columns names - we are reading only data. ***; 
+*** We cannot read columns names - we are reading only data.                      ***; 
+*** labels and other information about OMSI can be found in the file OMSI_ALL.sas ***;
 proc import datafile = csv_srs
 	             out = raw_ds
 	            dbms = csv replace ;
