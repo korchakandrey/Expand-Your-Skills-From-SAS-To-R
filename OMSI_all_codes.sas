@@ -1,5 +1,5 @@
 /***************************************************************
-* OMSI_all_code.sas - Demog from OMSI survey, BB-22 paper in SAS
+* OMSI_all_codes.sas - Demog from OMSI survey, BB-22 paper in SAS
 ***************************************************************
 * Author: Korchak, Andrii
 ***************************************************************
