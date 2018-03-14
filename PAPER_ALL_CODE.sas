@@ -1,5 +1,5 @@
 /***************************************************************
-* PAPER_ALL_CODE.sas - Produce examples from BB-22 paper in SAS
+* OMSI_ALL_CODE.sas - Produce examples from BB-22 paper in SAS
 ***************************************************************
 * Author: Korchak, Andrii
 ***************************************************************
@@ -9,31 +9,10 @@
 *         html tables from PROC Print
 ***************************************************************/
 
-
-*** ## Example 1 - reading text data in. ;
-**** 1.	Getting data **** ;
-data df1;
-	input col1 col2 $ col3 ;
-	datalines;
-1 a 1
-2 b 1
-3 c 0
-;
-run;
-title "Data from &syslast.";
-proc print data=df1;
-run;
-proc contents data=df1;
-run;
-
-
-
 *** reference to file with data ***;
 filename csv_srs "/folders/myfolders/conf/Library/mental-heath-in-tech-2016_20161114.csv";
 
-*** ## Example 2 - reading CSV data in. ;
-*** We cannot read columns names - we are reading only data.                      ***; 
-*** labels and other information about OMSI can be found in the file OMSI_ALL.sas ***;
+*** We cannot read columns names - we are reading only data.( datarow = 2, getnames = no ) ***; 
 proc import datafile = csv_srs
 	             out = raw_ds
 	            dbms = csv replace ;
@@ -42,160 +21,171 @@ proc import datafile = csv_srs
 	datarow=2;	
 run;
 
-%macro dummy;
-*** Data Flow Example **;
-proc sort data = row_data;
-	by BY_VAR1 descending BY_VAR2;
-	where STAT ~="NOT DONE";
+*** reading first row with column names    ***;
+*** writing attributes into temporary file ***;
+filename code temp;
+data  _NULL_ ;
+  file code;
+  infile csv_srs DELIMITER=',' DSD  obs=1 ;
+  input label :$200. @@ ;
+  put 'var' _N_ " label='" label  "'";
 run;
 
-data output_ds ( drop = ( VAR1 ) );
-	set row_data (  keep = ( BY_VAR1  BY_VAR2 VAR1 )
-	              rename = ( LOG_VAR1 = AVAL )
-                 );
-	by BY_VAR1 descending BY_VAR2;
+*** apply labels ***;
+options source2;
+proc datasets lib=work noprint NODETAILS NOLIST;
+  modify raw_ds;
+    attrib %include code;;
+  run;
+quit;
+
+*** list results ***;
+title 'List Variable Attributes';
+proc contents data=raw_ds;
+quit;
+
+*** Selecting some Demographic data;
+data demog2;
+   set raw_ds(
+   rename = (
+   VAR56 = AGE       
+   VAR57 = GENDER    
+   VAR63 = REMOTELY
+   VAR4  = IT_ROLE)) ;
+   
+   keep  AGE GENDER REMOTELY IT_ROLE ;
+run;
+
+***Starting transforming our data ***;
+data transform1;
 	
-	if first.BY_VAR1 then BFL = "Y" ;
+	set demog;
 	
-	LOG_VAR1 = log( VAR1 );
-run;
-%mend dummy;
+	*** Converting Character Age into numeric values ***;
+	AGEN = input(AGE, best.);
+    if AGEN > 90 or AGEN < 10 then AGEN = . ;
+    
+	*** Converting Free-Text Gender into 3 groups ***;
+	* all data into lower case to reduce diversity *;
+	gender_l = lowcase(GENDER);
 
-*** Example 2.2.1 ***;
-*** keep option ***;
-data df1_k;
-   set df1( keep = col1 col2);
-run;
-title "Data from &syslast.";
-proc print;
-run;
+	length GENDER_O GENDER_M GENDER_F GENDER_C $10. ;
 
-*** Drop option ***;
-data df1_d; 
-  set df1 ( drop = col3);
-run;
-title "Data from &syslast.";
-proc print; 
-run;
-*** keeping all columns between col1 and col3 ***;
-data df1_k_betw;
-  set df1 ;
-  keep col1-col3;
-run;
-title "Data from &syslast.";
-proc print;
-run;
+	if gender_l in ( "male (cis)","cis man","cis male","cis male","sex is male","male.","cis male","man","male","guy","cisdude", "dude", "dude", "m", "ml", "m|", "mail", "malr") 
+	or gender_l = "i'm a man why didn't you make this a drop down question. you should of asked sex? and i would of answered yes please. seriously how much text can this take?" 
+	   then GENDER_M = "Male";
 
-*** Selecting all variables that starts with 'col' ***;
-data df1_k_st;
-  set df1 ;
-  keep col: ;
-run;
-title "Data from &syslast.";
-proc print data = df1_k_st;
-run;
+    if gender_l in ("cis female","female assigned at birth","woman","female","female","i identify as female.","female or multi-gender femme","female/woman","cisgender female"," female","female (props for making this a freeform field, though)","f", "fem","fm","female-bodied; no feelings about gender","cis-woman")
+    	then GENDER_F = "Female";
 
-*** Renaming variables ***;
-data df1_rename ;
-  set df1 ;
-  rename col1 = Column1;
-run;
-title "Data from &syslast.";
-proc print data = df1_rename;
-run;
-
-*** Filtering data with IF ***;
-data df1_i;
-  set df1;
-  if col3 = 1 and col2 = "a";
-run;
-title "Data from &syslast.";
-proc print ;
-run;
-
-*** Filtering data by WHERE statement ***;
-data df1_w;
-  set df1;
-  where col3 = 1;
-run;
-***Both variants produce the same result but WHERE may be faster.***;
-title "Data from &syslast.";
-proc print;
-run;
-
-*** 2.4 Crreating new variables ***;
-*** _N_ - number of current row ***;
-*** nobs - total number of rows ***;
-data df_new_var;
-  set df1 nobs=n_obs;
-  n_2 = n_obs/2;
-  col4 = ifc(_N_ >= n_obs/2,">=n/2","<n/2","missing");
-  col1 = col1 + 0.03;
-run; 
-title "Data from &syslast.";
-proc print;
-run;
-
-*** 2.5 By Groupping ***;
-********* Grouping Variables ***;
-data df2;
-	input SUBJID $ TEST1 TEST2 PERIOD ;
-	TEST = mean(TEST1, TEST2 );
+	if gender_l in ("genderflux demi-girl","bigender","non-binary","transitioned, m2f","genderfluid (born female)","other/transfeminine","androgynous","male 9:1 female, roughly","n/a","other","nb masculine","none of your business","genderqueer","human","genderfluid","enby","genderqueer woman","mtf","queer","agender","fluid","male/genderqueer","nonbinary","unicorn","male (trans, ftm)","afab","transgender woman" ) 
+		then GENDER_O = "Other";
 	
-	datalines;
-S1 10 . 1	
-S1 8  7 2	
-S2 7 4 1	
-S2 5 3 2	
-;
-run;
-title "Data from &syslast.";
-proc print;
-run;
-
-*** Computing by Group Statistics ***;
-proc means data = df2;
-	var TEST;
-	by SUBJID;
-run;
-
-
-**** LAG function *******************;
-data df2_lag;
-	set df2 ( keep = SUBJID TEST1);
-	by SUBJID;
+	* Checking if data mapped correctly *;
+	if cmiss(GENDER_O, GENDER_M, GENDER_F) = 1 then put "WARN" "NING: Wrong mapping" GENDER_O= GENDER_M= GENDER_F= gender_l= ;
+	if cmiss(GENDER_O, GENDER_M, GENDER_F) = 3 and not missing( gender_l ) 
+	   then put "WARN" "NING: Wrong mapping" GENDER_O= GENDER_M= GENDER_F= gender_l= ;
 	
-	LAG_TEST1 = lag( TEST1 );
-	if first.SUBJID then LAG_TEST1 = .;
-run;
-title "Lag in SAS, Data from &syslast.";
-proc print;
+	* Creating new grouping variable for GENDER *;
+	GENDER_C = catx('',GENDER_O, GENDER_M, GENDER_F);
 run;
 
-**** Creating data set with addtional information ***;
-data df_add_info ;
-	input SUBJID $  NAME $;
-	datalines;
-S1 Nick
-S2 Cate 
-S3 Josh 
-;
-run;
-title  "Creating Data set with";
-title2 " Names, Data from &syslast.";
-proc print;
+*** Sorting the data before FREQ & MEANS Procedures ***;
+proc sort data = transform1 out = transform1_sort  ;
+	by GENDER_C ;
 run;
 
-*** Combining data horizontally ***;
-data df_test_name ;
-	merge df2        ( in = in_x )
-	      df_add_info( in = in_y );
-	by SUBJID ;
-	* inner join;
-	if in_x and in_y ;
-	keep TEST NAME ;
+*** Macro to check if parameter is missing ***;
+*** Additional information can be found at http://changchung.com/download/022-2009.pdf ***;
+%macro isBlank(param);
+ %sysevalf(%superq(param)=,boolean)
+%mend isBlank; 
+
+*** Proc FREQ to calculate count and percent ***;
+%macro loop_freq(var = , by_var = , where = ,ds = transform1_sort);
+	proc freq data = &ds. noprint;
+	   tables &var. / out= &var._output missing;
+	   %if &by_var. ne %then by &by_var. ;;
+	   %if not %isBlank(&where.) %then where &where. ;;
+	run;	
+%mend loop_freq;
+
+options mprint;
+%loop_freq(var = GENDER_C, by_var = )*, where = %str( not missing(GENDER_C) ));
+%loop_freq(var = IT_ROLE, by_var = )*,  where = %str( IT_ROLE in (1,0) )    ) ;
+%loop_freq(var = REMOTELY, by_var =)* , where = %str( REMOTELY in ("Always", "Never", "Sometimes" )));
+
+*** PROC SUMMARY to analyse numeric variables ***;
+proc summary data = transform1;
+	var AGEN  ;
+	output out = age_out;
 run;
-title  "Combined Data Set,";
-title1 "Data from &syslast.";
-proc print;
+
+*** This step is required to calculate BigN ***;
+proc sql noprint;
+	select count(1)  into: bign
+	from demog;
+quit;
+
+*** Transforming data from wide to long fomat ***;
+proc transpose data = AGE_OUT out = AGE_OUT_T;
+	by _type_ _freq_;
+	id _stat_; 
+run;
+
+*** Combining all rows together ***;
+data outcome;
+	length PARAM $20. CAT $50. VALUE $20. ;
+    
+	set GENDER_C_output ( in = in_g   )
+	    AGE_OUT_T       ( in = in_age )                        
+	    IT_ROLE_output  ( in = in_it  )
+	    REMOTELY_output ( in = in_rem ) ;
+	                          
+	   if in_g        then do; 
+	        CAT = "Gender";
+	        PARAM = GENDER_C;
+	   end;
+	   else if in_it  then do;
+	   	    CAT = "Tech\IT Role?";
+	   	    PARAM = IT_ROLE ;
+	   	    if missing(IT_ROLE) then PARAM = "NA";
+	   end;
+	   else if in_rem then do; 
+	       CAT = "Working Remotely?";
+	       PARAM = REMOTELY;
+	   end;
+	   else if in_age then do;
+	       CAT = "Age";
+	   end;
+	   
+	   *** Changing apperense of missing values **;
+	   if missing(PARAM) then PARAM = "NA";
+	   
+	   if in_age then do;
+	   		PARAM = "N";
+	   		VALUE = put(N,4.);
+			output;
+	   		PARAM = "Mean(SD)";
+	   		VALUE = put(MEAN,5.1)||"("||put(STD,4.1)||")";
+			output;
+	   		PARAM = "Min-Max";
+	   		VALUE = put(MIN,4.)||" - "||put(MAX,4.);
+			output;
+	   end;
+	   else do;
+	       VALUE = put(COUNT,4.)||"("||put(COUNT/&BIGN.*100,4.1)||"%)";
+	       output;
+	   end;
+run;
+
+*** Printing the results ***;
+title "Demographic Information";
+proc report data = outcome split='@';
+	columns CAT PARAM VALUE  ;
+	define CAT   /"Question"  order;
+	define PARAM /"Parameter" display;
+	define VALUE / "All responses@(N = &bign.)" display;
+
+	compute after CAT;	line ' '; endcomp;
 run;
