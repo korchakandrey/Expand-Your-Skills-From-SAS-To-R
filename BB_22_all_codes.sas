@@ -8,38 +8,76 @@
 * Output: WORK.raw_ds  - file with demographic information from OMSI survey
 *         html tables from PROC Print
 ***************************************************************/
-
-*** ## Example 1 - reading text data in. ;
+*** ## Table 1 - reading text data in. ;
 **** 1.	Getting data **** ;
-data df1;
-	input col1 col2 $ col3 ;
+data dm;
+	input SUBJID AGE POFL $;
 	datalines;
-1 a 1
-2 b 1
-3 c 0
+1 23 Y
+2 45 Y
+3 61 N
 ;
 run;
 title "Data from &syslast.";
-proc print data=df1;
+proc print data=dm;
 run;
-proc contents data=df1;
+proc contents data=dm;
 run;
 
-*** reference to file with data ***;
-filename csv_srs "/your_folder_name/mental-heath-in-tech-2016_20161114.csv";
+*** ## Table 2 - reading CSV data in. ;
+libname mylib "/folders/myfolders/conf/Library";
+filename csv_srs "/folders/myfolders/conf/Library/mental-heath-in-tech-2016_20161114.csv";
 
-*** ## Example 2 - reading CSV data in. ;
 *** We cannot read columns names - we are reading only data. ***; 
 proc import datafile = csv_srs
 	             out = raw_ds
 	            dbms = csv replace ;
 	guessingrows = MAX ;
 	getnames = no  ;
-	datarow=2;	
+	datarow = 2;	
+run;
+
+*** To apply meaningful labels we are reading first row, and saving it into the temporary text file ***;
+filename code temp;
+data  _NULL_ ;
+  file code;
+  infile csv_srs DELIMITER=',' DSD  obs=1 ;
+  input label :$200. @@ ;
+  put 'var' _N_ " label='" label  "'";
+run;
+
+* apply labels *;
+options source2;
+proc datasets lib=work ;
+  modify raw_ds;
+    attrib %include code;;
+  run;
+quit;
+
+* list results *;
+title 'List Variable Attributes';
+proc contents data=raw_ds;
+quit;
+
+* Selecting Demographic data;
+data mylib.demog2;
+   set raw_ds(
+   rename = (
+   VAR56 = AGE       
+   VAR57 = GENDER    
+   VAR58 = COUNTRY   
+   VAR59 = US_STATE  
+   VAR60 = W_COUNTRY 
+   VAR61 = W_US_STATE
+   VAR62 = POSITION   
+   VAR63 = REMOTELY
+   VAR4  = IT_ROLE)) ;
+   
+   keep  AGE GENDER COUNTRY US_STATE W_COUNTRY W_US_STATE POSITION REMOTELY IT_ROLE ;
 run;
 
 %macro dummy;
-*** Data Flow Example **;
+*** Typical Data Flow Example **;
 proc sort data = row_data;
 	by BY_VAR1 descending BY_VAR2;
 	where STAT ~="NOT DONE";
@@ -59,60 +97,58 @@ run;
 
 *** Example 2.2.1 ***;
 *** keep option ***;
-data df1_k;
-   set df1( keep = col1 col2);
+data dm_k;
+   set dm( keep = SUBJID AGE);
 run;
 title "Data from &syslast.";
 proc print;
 run;
-
-*** Drop option ***;
-data df1_d; 
-  set df1 ( drop = col3);
+***    or by drop option ***;
+data dm_d; 
+  set dm ( drop = POFL);
 run;
 title "Data from &syslast.";
 proc print; 
 run;
-*** keeping all columns between col1 and col3 ***;
-data df1_k_betw;
-  set df1 ;
-  keep col1-col3;
+*** keeping all columns between SUBJID and POFL ***;
+data dm_k_betw;
+  set dm ;
+  keep SUBJID:POFL;
 run;
 title "Data from &syslast.";
 proc print;
 run;
-
-*** Selecting all variables that starts with 'col' ***;
-data df1_k_st;
-  set df1 ;
-  keep col: ;
+*** Selecting all variables that starts with 'AGE' ***;
+data dm_k_st;
+  set dm ;
+  keep AGE: ;
 run;
 title "Data from &syslast.";
-proc print data = df1_k_st;
+proc print data = dm_k_st;
 run;
 
 *** Renaming variables ***;
-data df1_rename ;
-  set df1 ;
-  rename col1 = Column1;
+data dm_rename ;
+  set dm ;
+  rename SUBJID = PATNUM;
 run;
 title "Data from &syslast.";
-proc print data = df1_rename;
+proc print data = dm_rename;
 run;
 
-*** Filtering data with IF ***;
-data df1_i;
-  set df1;
-  if col3 = 1 and col2 = "a";
+*** Filtering data ***;
+data dm_i;
+  set dm;
+  if POFL = "Y" and AGE > 21;
 run;
 title "Data from &syslast.";
 proc print ;
 run;
 
-*** Filtering data by WHERE statement ***;
-data df1_w;
-  set df1;
-  where col3 = 1;
+*** or use WHERE statement ***;
+data dm_w;
+  set dm;
+  where POFL = "Y" and AGE > 21;
 run;
 ***Both variants produce the same result but WHERE may be faster.***;
 title "Data from &syslast.";
@@ -120,76 +156,75 @@ proc print;
 run;
 
 *** 2.4 Crreating new variables ***;
-*** _N_ - number of current row ***;
-*** nobs - total number of rows ***;
+*** Creting new Varibles ***;
 data df_new_var;
-  set df1 nobs=n_obs;
-  n_2 = n_obs/2;
+  set dm nobs=n_obs;
+  N_ROWS = n_obs;
   col4 = ifc(_N_ >= n_obs/2,">=n/2","<n/2","missing");
-  col1 = col1 + 0.03;
+  USUBJID = "A00-"||put(SUBJID,3.-l);
+  drop SUBJID;
 run; 
+title "Data from &syslast.";
+proc print;
+run;
+
+*** 2.5 Sorting Data ***;
+*** 2.5.1 Sorting data ;
+*** and saving result into new dataset***;
+proc sort data=dm out= dm_sort;
+	by 	POFL;
+run;
+title "Data from &syslast.";
+proc print;
+run;
+
+*** 2.5.1 Sorting data ;
+*** descending sort ;
+proc sort data=dm out= dm_sort_desc;
+	by POFL descending SUBJID;
+run;
 title "Data from &syslast.";
 proc print;
 run;
 
 *** 2.5 By Groupping ***;
 ********* Grouping Variables ***;
-data df2;
-	input SUBJID $ TEST1 TEST2 PERIOD ;
-	TEST = mean(TEST1, TEST2 );
-	
+data vs;
+	input SUBJID HT WT PERIOD ;
 	datalines;
-S1 10 . 1	
-S1 8  7 2	
-S2 7 4 1	
-S2 5 3 2	
+001 180 . 1	
+001 181 77 2	
+002 173 85 1	
+002 173 83 2	
 ;
 run;
 title "Data from &syslast.";
 proc print;
 run;
 
-*** Computing by Group Statistics ***;
-proc means data = df2;
-	var TEST;
+proc means data = vs;
+	var HT WT;
+	output out = vs_s;
 	by SUBJID;
 run;
 
-
 **** LAG function *******************;
-data df2_lag;
-	set df2 ( keep = SUBJID TEST1);
+data vs_lag;
+	set vs ( keep = SUBJID HT);
 	by SUBJID;
-	
-	LAG_TEST1 = lag( TEST1 );
-	if first.SUBJID then LAG_TEST1 = .;
+	LAG_HT = lag( HT );
+	if first.SUBJID then LAG_HT = .;
 run;
 title "Lag in SAS, Data from &syslast.";
 proc print;
-run;
 
-**** Creating data set with addtional information ***;
-data df_add_info ;
-	input SUBJID $  NAME $;
-	datalines;
-S1 Nick
-S2 Cate 
-S3 Josh 
-;
-run;
-title  "Creating Data set with";
-title2 " Names, Data from &syslast.";
-proc print;
-run;
-
-*** Combining data horizontally ***;
-data df_test_name ;
-	merge df2        ( in = in_x )
-	      df_add_info( in = in_y );
+data advs ;
+	merge vs( in = in_x )
+	      dm( in = in_y );
 	by SUBJID ;
 	* inner join;
 	if in_x and in_y ;
-	keep TEST NAME ;
+	keep HT WT SUBJID POFL;
 run;
 title  "Combined Data Set,";
 title1 "Data from &syslast.";
